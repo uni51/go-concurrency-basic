@@ -1,39 +1,43 @@
 package main
 
-import "sync"
+import (
+	"fmt"
+	"runtime"
+	"sync"
+)
 
-/*
-func main() {
-	var wg sync.WaitGroup
+func memConsumed() uint64 {
+	runtime.GC() // GCを強制的に実行する
 
-	say := "Hello"
+	var s runtime.MemStats // メモリの使用量を調べるための受け皿
 
-	wg.Add(1)
+	runtime.ReadMemStats(&s)
 
-	go func() {
-		defer wg.Done()
-		say = "Good Bye"
-	}()
-
-	wg.Wait()
-
-	fmt.Println(say) // Good Bye
+	return s.Sys
 }
-*/
 
 func main() {
+	var ch <-chan interface{}
 	var wg sync.WaitGroup
 
-	tasks := []string{"A", "B", "C"}
+	noop := func() {
+		wg.Done()
+		<-ch // チャネルから値を受信する
+	}
 
-	for _, task := range tasks {
-		wg.Add(1)
+	const numGoroutines = 100000
 
-		go func(task string) {
-			defer wg.Done()
-			println(task) // C B A
-		}(task)
+	wg.Add(numGoroutines)
+
+	before := memConsumed()
+
+	for i := 0; i < numGoroutines; i++ {
+		go noop()
 	}
 
 	wg.Wait()
+
+	after := memConsumed()
+
+	fmt.Printf("%.3fkb", float64(after-before)/numGoroutines/1000)
 }

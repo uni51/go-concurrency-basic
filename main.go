@@ -6,38 +6,22 @@ import (
 	"sync"
 )
 
-func memConsumed() uint64 {
-	runtime.GC() // GCを強制的に実行する
-
-	var s runtime.MemStats // メモリの使用量を調べるための受け皿
-
-	runtime.ReadMemStats(&s)
-
-	return s.Sys
+func Hello(wg *sync.WaitGroup, id int) {
+	defer wg.Done()
+	fmt.Printf("Hello from %v!\n", id)
 }
 
 func main() {
-	var ch <-chan interface{}
 	var wg sync.WaitGroup
 
-	noop := func() {
-		wg.Done()
-		<-ch // チャネルから値を受信する
-	}
+	var CPU int = runtime.NumCPU()
 
-	const numGoroutines = 100000
+	// wg.Add(CPU)
 
-	wg.Add(numGoroutines)
-
-	before := memConsumed()
-
-	for i := 0; i < numGoroutines; i++ {
-		go noop()
+	for i := 0; i < CPU; i++ {
+		wg.Add(1)
+		go Hello(&wg, i)
 	}
 
 	wg.Wait()
-
-	after := memConsumed()
-
-	fmt.Printf("%.3fkb", float64(after-before)/numGoroutines/1000)
 }
